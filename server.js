@@ -5,7 +5,10 @@ import puppeteer from "puppeteer";
 
 const app = express();
 const PORT = 5000;
-app.use(cors());
+app.use(cors({
+  origin: "https://firestormmm.vercel.app/"
+}));
+
 
 app.get("/scan", async (req, res) => {
   const url = req.query.url;
