@@ -1,14 +1,11 @@
-// backend/server.js
 import express from "express";
 import cors from "cors";
 import puppeteer from "puppeteer";
 
+
 const app = express();
 const PORT = 5000;
-app.use(cors({
-  origin: "https://firestormmm.vercel.app/"
-}));
-
+app.use(cors());
 
 app.get("/scan", async (req, res) => {
   const url = req.query.url;
@@ -16,7 +13,12 @@ app.get("/scan", async (req, res) => {
 
   let browser;
   try {
-    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+    browser = await puppeteer.launch({
+  headless: true,
+  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+  args: ["--no-sandbox", "--disable-setuid-sandbox"]
+});
+
     const page = await browser.newPage();
 
     await page.setUserAgent(
@@ -25,7 +27,6 @@ app.get("/scan", async (req, res) => {
 
     await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
 
-    // Auto-scroll for lazy-loaded content
     await page.evaluate(async () => {
       let distance = 100;
       while (document.scrollingElement.scrollTop + window.innerHeight < document.scrollingElement.scrollHeight) {
@@ -69,7 +70,7 @@ app.get("/scan", async (req, res) => {
       hiddenElements.forEach(el => {
         const elId = assignTempId(el);
         detected.push({
-          message: "❌ Hidden / hard-to-see button/link",
+          message: " Hidden / hard-to-see button/link",
           snippet: el.outerHTML,
           xpath: getXPath(el),
           link: window.location.href + "#" + elId,
@@ -85,7 +86,7 @@ app.get("/scan", async (req, res) => {
           if (text.includes(pattern)) {
             const elId = assignTempId(el);
             detected.push({
-              message: "⚠️ Confirmshaming / manipulative message",
+              message: " Confirmshaming / manipulative message",
               snippet: text.slice(0, 150),
               xpath: getXPath(el),
               link: window.location.href + "#" + elId,
@@ -100,7 +101,7 @@ app.get("/scan", async (req, res) => {
         if (text.includes("free trial") && text.includes("credit card") && !text.includes("cancel anytime")) {
           const elId = assignTempId(el);
           detected.push({
-            message: "⚠️ Potential deceptive subscription / auto-renewal",
+            message: "Potential deceptive subscription / auto-renewal",
             snippet: text.slice(0, 150),
             xpath: getXPath(el),
             link: window.location.href + "#" + elId,
@@ -114,7 +115,7 @@ app.get("/scan", async (req, res) => {
         .map(box => {
           const elId = assignTempId(box);
           return {
-            message: "⚠️ Pre-checked subscription / paid add-on",
+            message: " Pre-checked subscription / paid add-on",
             snippet: box.outerHTML,
             xpath: getXPath(box),
             link: window.location.href + "#" + elId,
@@ -123,10 +124,9 @@ app.get("/scan", async (req, res) => {
         });
       detected.push(...preChecked);
 
-      return detected.length ? detected : [{ message: "✅ No dark UX patterns detected", snippet: "", link: window.location.href, selector: null }];
+      return detected.length ? detected : [{ message: " No dark UX patterns detected", snippet: "", link: window.location.href, selector: null }];
     });
 
-    // Add numbered badges for screenshot
     await page.evaluate((issues) => {
       issues.forEach((issue, index) => {
         if (issue.selector) {
@@ -140,17 +140,17 @@ app.get("/scan", async (req, res) => {
             badge.innerText = index + 1;
             badge.style.position = "absolute";
             badge.style.top = `${rect.top + window.scrollY}px`;
-            badge.style.left = `${rect.left + window.scrollX}px`;
+               badge.style.left = `${rect.left + window.scrollX}px`;
             badge.style.width = "25px";
             badge.style.height = "25px";
-            badge.style.background = "red";
+                badge.style.background = "red";
             badge.style.color = "white";
-            badge.style.borderRadius = "50%";
+                badge.style.borderRadius = "50%";
             badge.style.fontSize = "14px";
-            badge.style.fontWeight = "bold";
+               badge.style.fontWeight = "bold";
             badge.style.display = "flex";
             badge.style.alignItems = "center";
-            badge.style.justifyContent = "center";
+                badge.style.justifyContent = "center";
             badge.style.zIndex = "9999";
             badge.style.pointerEvents = "none";
             document.body.appendChild(badge);
@@ -159,6 +159,9 @@ app.get("/scan", async (req, res) => {
       });
     }, issues);
 
+
+
+    
     const screenshot = await page.screenshot({ encoding: "base64", fullPage: true });
 
     res.json({ url, issues, screenshot: `data:image/png;base64,${screenshot}` });
@@ -169,4 +172,12 @@ app.get("/scan", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`✅ Dark UX Detector running on http://localhost:${PORT}`));
+
+
+
+
+
+
+
+
+app.listen(PORT, () => console.log(` Dark UX Detector running on http://localhost:${PORT}`));
